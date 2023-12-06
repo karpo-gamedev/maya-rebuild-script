@@ -1,0 +1,43 @@
+//--------------------------------------------------------------------
+//ブレンドシェイプを含んだオブジェクトを調整後にターゲットを書き出すスクリプト
+//--------------------------------------------------------------------
+import maya.cmds as cmds
+
+selected_objects = cmds.ls(selection=True)
+
+if not selected_objects:
+    print("Please select a mesh")
+else:
+    original_blendShape_values = {}
+    duplicated_objects = []
+
+    for obj in selected_objects:
+        blendShapes = cmds.ls(cmds.listHistory(obj), type='blendShape')
+        if blendShapes:
+            target_shapes = cmds.listAttr(blendShapes[0] + '.w', m=True)
+            original_blendShape_values[obj] = {shape: cmds.getAttr(blendShapes[0] + "." + shape) for shape in target_shapes}
+
+            for shape in target_shapes:
+                for reset_shape in target_shapes:
+                    cmds.setAttr(blendShapes[0] + "." + reset_shape, 0)
+
+                cmds.setAttr(blendShapes[0] + "." + shape, 1)
+
+                duplicated_obj = cmds.duplicate(obj)[0]
+                renamed_obj = cmds.rename(duplicated_obj, shape)
+                duplicated_objects.append(renamed_obj)
+        else:
+            duplicated_obj = cmds.duplicate(obj)[0]
+            duplicated_objects.append(duplicated_obj)
+
+    for obj in selected_objects:
+        if obj in original_blendShape_values:
+            for shape, value in original_blendShape_values[obj].items():
+                cmds.setAttr(blendShapes[0] + "." + shape, value)
+
+    if duplicated_objects:
+        group_name = "Export_BlendShapes_mdl"
+        cmds.group(duplicated_objects, name=group_name)
+        cmds.reorder(group_name, front=True)
+    else:
+        print("unable to create group")
